@@ -7,44 +7,62 @@ export async function middleware(request) {
   const token = request.cookies.get('session_token')?.value;
   const { pathname } = request.nextUrl;
 
-  // 1. KECUALIKAN halaman login dari pengecekan token
-  // Jika tidak, user yang belum login tidak akan pernah bisa buka halaman login
-  if (pathname === '/admin/login') {
-    // Jika user SUDAH login tapi malah buka halaman login, lempar ke dashboard
-    if (token) {
-      try {
-        await jwtVerify(token, secret);
-        return NextResponse.redirect(new URL('/admin', request.url));
-      } catch (err) {
-        // Token tidak valid, biarkan dia tetap di halaman login
-        return NextResponse.next();
-      }
+  let payload = null;
+
+  if (token) {
+    try {
+      const verified = await jwtVerify(token, secret);
+      payload = verified.payload;
+    } catch (err) {
+      payload = null;
+    }
+  }
+
+  // --- 1. HALAMAN AUTH (/auth/login, /auth/register) ---
+  if (pathname.startsWith('/auth/')) {
+    if (payload) {
+      // Jika sudah login, kembalikan ke tempat yang sesuai role
+      const target = payload.role === 'ADMIN' ? '/admin' : '/';
+      return NextResponse.redirect(new URL(target, request.url));
     }
     return NextResponse.next();
   }
 
-  // 2. PROTEKSI semua route yang dimulai dengan /admin
+  // --- 2. AREA ADMIN (/admin/:path*) ---
   if (pathname.startsWith('/admin')) {
-    if (!token) {
-      return NextResponse.redirect(new URL('/admin/login', request.url));
+    // Kecuali halaman login admin itu sendiri
+    if (pathname === '/admin/login') {
+      if (payload && payload.role === 'ADMIN') {
+        return NextResponse.redirect(new URL('/admin', request.url));
+      }
+      return NextResponse.next();
     }
 
-    try {
-      // Verifikasi token
-      await jwtVerify(token, secret);
-      return NextResponse.next();
-    } catch (err) {
-      // Jika token expired atau palsu, bersihkan cookie dan redirect
-      const response = NextResponse.redirect(new URL('/admin/login', request.url));
-      response.cookies.delete('session_token');
-      return response;
+    // Blokir jika bukan ADMIN
+    if (!payload || payload.role !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/admin/login', request.url));
     }
   }
 
+  // --- 3. AREA PROTEKSI USER (/pemesanan-saya, dll) ---
+  if (pathname.startsWith('/pemesanan-saya')) {
+    // Jika dia ADMIN, jangan lempar ke login user umum, 
+    // tapi biarkan dia lewat atau lempar ke dashboard admin saja.
+    if (payload && payload.role === 'ADMIN') {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    }
+
+    // Jika bukan USER (atau tidak login), lempar ke login user
+    if (!payload || payload.role !== 'USER') {
+      return NextResponse.redirect(new URL('/auth/login', request.url));
+    }
+  }
+
+  // Halaman lain (Beranda, Shop, About) dibiarkan bebas akses
   return NextResponse.next();
 }
 
-// Tetap jalankan middleware untuk folder admin
 export const config = {
-  matcher: '/admin/:path*',
+  // Pastikan matcher hanya mengawasi rute yang memang butuh proteksi
+  matcher: ['/admin/:path*', '/pemesanan-saya/:path*', '/auth/:path*'],
 };

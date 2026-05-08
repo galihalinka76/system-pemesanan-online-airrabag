@@ -7,6 +7,7 @@ import PromoSection from "./components/pelanggan/PromoSection";
 import NewArrivals from "./components/pelanggan/NewArrivals";
 import ProductFilter from "./components/pelanggan/ProductFilter";
 import Image from "next/image";
+import CheckoutModal from "./components/pelanggan/checkout/CheckoutModal";
 
 export default function HomePage() {
   const [showProducts, setShowProducts] = useState(false);
@@ -17,6 +18,11 @@ export default function HomePage() {
   const [selectedPrice, setSelectedPrice] = useState("all");
   const [selectedModel, setSelectedModel] = useState("All Models");
   const [searchQuery, setSearchQuery] = useState("");
+  // 1. Tambahkan state baru di HomePage
+const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+const [checkoutData, setCheckoutData] = useState<{items: any[], total: number}>({ items: [], total: 0 });
+
+
 
   useEffect(() => {
     async function fetchData() {
@@ -92,6 +98,13 @@ const filteredPromos = promos.filter((p: any) => {
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(price || 0);
+
+
+    // 2. Buat fungsi helper untuk buka modal
+const handleOpenCheckout = (items: any[], total: number) => {
+  setCheckoutData({ items, total });
+  setIsCheckoutOpen(true);
+};
 
   return (
     <main className="min-h-screen bg-olive-200 text-black transition-all duration-500 overflow-x-hidden">
@@ -251,7 +264,12 @@ const filteredPromos = promos.filter((p: any) => {
 
                               {/* Baris Action Buttons */}
                               <div className="flex items-center gap-2">
-                                <button className="flex-grow bg-[#B6AB91] text-[#062C2C] py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white transition-all shadow-lg active:scale-95">
+                                <button
+                                onClick={() => handleOpenCheckout(
+                                  [p.mainProduct, p.secondProduct || p.subProduct], 
+                                  p.promoPrice 
+                                )}
+                                className="flex-grow bg-[#B6AB91] text-[#062C2C] py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white transition-all shadow-lg active:scale-95">
                                   Beli Bundle {formatIDR(p.promoPrice)}
                                 </button>
 
@@ -280,7 +298,10 @@ const filteredPromos = promos.filter((p: any) => {
 
                   {/* NEW ARRIVALS */}
                   {!loading && newArrivalsData.length > 0 && (
-                    <NewArrivals products={newArrivalsData} />
+                    <NewArrivals
+                      products={newArrivalsData}
+                      onBuy={(item) => handleOpenCheckout([item], item.price)}
+                    />
                   )}
 
                   {/* FULL COLLECTION */}
@@ -301,7 +322,11 @@ const filteredPromos = promos.filter((p: any) => {
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-12 pb-32">
                         {archiveProductsData.map((product: any) => (
-                          <ProductCard key={product.id} product={product} />
+                         <ProductCard 
+                          key={product.id} 
+                          product={product} 
+                          onBuy={(item) => handleOpenCheckout([item], item.price)} 
+                        />
                         ))}
                       </div>
                     )}
@@ -312,6 +337,13 @@ const filteredPromos = promos.filter((p: any) => {
           </section>
         )}
       </div>
+      <CheckoutModal 
+      isOpen={isCheckoutOpen} 
+      onClose={() => setIsCheckoutOpen(false)} 
+      items={checkoutData.items} 
+      totalPrice={checkoutData.total}
+      userId={1} // Sementara hardcode user ID 1
+    />
     </main>
   );
 }

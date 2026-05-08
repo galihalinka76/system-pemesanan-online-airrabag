@@ -2,10 +2,11 @@
 import Image from "next/image";
 import { ShoppingCart, Heart } from "lucide-react"; 
 
-export default function ProductCard({ product }: { product: any }) {
+export default function ProductCard({ product, onBuy }: { product: any, onBuy: (item: any) => void }) {
   return (
     <div className="group relative bg-[#062C2C] rounded-lg p-6 flex flex-col items-center 
       transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:-translate-y-2 border border-white/5">
+      
       {/* Product Name */}
       <h3 className="text-white text-[13px] font-light tracking-wide mb-5 text-center px-2">
         {product.name}
@@ -25,7 +26,6 @@ export default function ProductCard({ product }: { product: any }) {
             No Image Available
           </div>
         )}
-        {/* Subtle Overlay */}
         <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-500"></div>
       </div>
 
@@ -48,13 +48,26 @@ export default function ProductCard({ product }: { product: any }) {
         </button>
       </div>
 
-      {/* Buy Button */}
-      <button className="w-[85%] bg-white text-[#062C2C] py-2.5 rounded-full font-extrabold text-[12px] uppercase tracking-[0.2em] hover:bg-[#B6AB91] hover:text-white transition-all duration-300 shadow-lg">
-        Beli
-      </button>
+      {/* Container Tombol & Stock */}
+      <div className="relative w-full flex flex-col items-center">
+        {/* Buy Button */}
+        <button 
+          onClick={() => onBuy(product)}
+          className="w-[85%] bg-white text-[#062C2C] py-2.5 rounded-full font-extrabold text-[12px] uppercase tracking-[0.2em] hover:bg-[#B6AB91] hover:text-white transition-all duration-300 shadow-lg"
+        >
+          Beli
+        </button>
 
-      {/* Bottom Decor Line */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-white/20 group-hover:w-16 group-hover:bg-[#B6AB91] transition-all duration-500 rounded-full"></div>
+        {/* Stock Info - Letak: Kanan Bawah Tombol */}
+        <div className="absolute -bottom-5 right-[2%] flex items-center gap-1">
+          <span className={`text-[10px] font-bold ${product.stock > 0 ? 'text-[#B6AB91]' : 'text-red-500'}`}>
+            {product.stock ?? 0}
+          </span>
+        </div>
+      </div>
+
+      {/* Bottom Decor Line - Jaraknya disesuaikan sedikit karena ada teks stok */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-white/20 group-hover:w-16 group-hover:bg-[#B6AB91] transition-all duration-500 rounded-full"></div>
     </div>
   );
 }

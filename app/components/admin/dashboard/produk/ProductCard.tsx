@@ -7,17 +7,27 @@ interface ProductProps {
   price: string;
   stock: number;
   image: string;
+  description?: string;
   onDelete: (id: number) => void;
   onEdit: (product: any) => void;
   onAddToPromo: (product: any) => void; 
 }
 
-export default function ProductCard({ id, name, category, price, stock, image, onAddToPromo, onEdit, onDelete }: ProductProps) {
+export default function ProductCard({ id, name, category, price, stock, image, description, onAddToPromo, onEdit, onDelete }: ProductProps) {
   return (
     <div className="bg-[#063130] rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow relative group text-white">
       <div className="flex justify-between items-center mb-3">
         <button 
-          onClick={() => onEdit({ id, name, category, price, stock, image })}
+
+  onClick={() => onEdit({ 
+    id, 
+    name, 
+    category, 
+    price, 
+    stock, 
+    image, 
+    description: description 
+  })}
           className="flex items-center text-[10px] font-medium text-gray-200 hover:text-white transition-colors"
         >
           <Edit2 size={12} className="mr-1" /> Edit
@@ -47,7 +57,7 @@ export default function ProductCard({ id, name, category, price, stock, image, o
 
         {/* Klik Button ini untuk memicu modal */}
         <button 
-          onClick={() => onAddToPromo({ id, name, category, price, image })}
+          onClick={() => onAddToPromo({ id, name, category, price, image, description })}
           className="w-full mt-2 bg-[#DDCC9D] hover:bg-[#B6AB91] text-[#0f3433] text-[10px] font-bold py-1.5 rounded-full transition-colors flex items-center justify-center"
         >
           Tambah Ke Promo <Plus size={10} className="ml-1" />

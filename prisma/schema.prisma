@@ -11,6 +11,7 @@ model User {
   id        Int      @id @default(autoincrement())
   name      String
   email     String   @unique
+  address   String?  @db.Text
   password  String
   role      Role     @default(USER)
   createdAt DateTime @default(now())
@@ -22,6 +23,7 @@ model Product {
   id          Int         @id @default(autoincrement())
   name        String
   category    String      
+ description  String?  @db.Text
   price       Float
   stock       Int
   image       String?
@@ -63,11 +65,12 @@ model Order {
 }
 
 model OrderItem {
-  id        Int @id @default(autoincrement())
-  orderId   Int
-  productId Int
-  quantity  Int
-
+  id              Int     @id @default(autoincrement())
+  orderId         Int
+  productId       Int
+  quantity        Int
+  priceAtPurchase Float   
+  
   order   Order   @relation(fields: [orderId], references: [id])
   product Product @relation(fields: [productId], references: [id])
 }

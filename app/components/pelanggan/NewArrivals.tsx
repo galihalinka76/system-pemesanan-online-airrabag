@@ -2,7 +2,7 @@
 "use client";
 import ProductCard from "./ProductCard";
 
-export default function NewArrivals({ products }: { products: any[] }) {
+export default function NewArrivals({ products, onBuy }: { products: any[]; onBuy: (item: any) => void }) {
   // Filter produk yang dibuat dalam 3 hari terakhir
   const threeDaysAgo = new Date();
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
@@ -26,7 +26,7 @@ export default function NewArrivals({ products }: { products: any[] }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-16">
         {newProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          <ProductCard key={product.id} product={product} onBuy={onBuy} />
         ))}
       </div>
     </div>
