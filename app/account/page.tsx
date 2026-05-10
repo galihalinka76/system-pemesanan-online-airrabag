@@ -5,7 +5,7 @@ import Navbar from "@/app/components/pelanggan/Navbar";
 import Sidebar from "../components/pelanggan/account/Sidebar";
 
 // Import Komponen Tab (Pastikan kamu sudah membuat file-file ini)
-// import ProfileTab from "../components/pelanggan/account/ProfileTab";
+import ProfileTab from "../components/pelanggan/account/ProfileTab";
 import OrdersTab from "../components/pelanggan/account/OrdersTab";
 // import FavoritesTab from "../components/pelanggan/account/FavoritesTab";
 
@@ -25,7 +25,7 @@ function AccountContent() {
 
       {/* RENDER KONTEN BERDASARKAN TAB DI URL */}
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-        {/* {activeTab === "profile" && <ProfileTab />} */}
+        {activeTab === "profile" && <ProfileTab />}
         {activeTab === "orders" && <OrdersTab />}
         {activeTab === "shipments" && (
             <div className="py-20 text-center">
@@ -44,18 +44,10 @@ export default function AccountPage() {
       <Navbar />
 
       <div className="pt-32 pb-20 px-6 md:px-12 flex gap-12 max-w-7xl mx-auto h-full">
-        {/* 
-           SIDEBAR: Sekarang tidak perlu oper props manual, 
-           Sidebar akan membaca & mengubah URL secara mandiri 
-        */}
+       
         <Suspense fallback={<div className="w-64 animate-pulse bg-gray-200 rounded-xl" />}>
            <Sidebar />
         </Suspense>
-
-        {/* 
-           CONTENT AREA: Dibungkus Suspense karena useSearchParams 
-           memerlukannya pada Client Component di Next.js 
-        */}
         <Suspense fallback={<div className="flex-grow bg-white rounded-md animate-pulse" />}>
           <AccountContent />
         </Suspense>

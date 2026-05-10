@@ -8,17 +8,24 @@ const secret = new TextEncoder().encode(process.env.JWT_SECRET || "rahasia_super
 export async function GET(request: Request) {
   try {
     const token = request.headers.get("cookie")?.split("session_token=")[1]?.split(";")[0];
-    if (!token) return NextResponse.json({ user: null }, { status: 200 });
+    if (!token) return NextResponse.json({ user: null }, { status: 401 });
 
     const { payload } = await jwtVerify(token, secret);
 
     const user = await prisma.user.findUnique({
       where: { id: payload.id as number },
-      select: { name: true, role: true } // Ambil data siapa pun yang login
+      select: { 
+        id: true,
+        name: true, 
+        email: true, 
+        no_telp:true,
+        address: true, 
+        role: true 
+      }
     });
 
     return NextResponse.json({ user }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ user: null }, { status: 200 });
+    return NextResponse.json({ user: null }, { status: 500 });
   }
 }

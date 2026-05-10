@@ -6,7 +6,8 @@ const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password, address } = await request.json();
+    // Tambahkan no_telp di destrukturisasi json
+    const { name, email, password, address, no_telp } = await request.json();
 
     // 1. Cek apakah user sudah ada
     const existingUser = await prisma.user.findUnique({
@@ -23,11 +24,12 @@ export async function POST(request: Request) {
     // 2. Hash Password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 3. Simpan ke Database
+    // 3. Simpan ke Database (sertakan no_telp)
     const user = await prisma.user.create({
       data: {
         name,
         email,
+        no_telp, // 👈 Simpan ke kolom baru
         address,
         password: hashedPassword,
         role: "USER", 
@@ -39,6 +41,7 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (error) {
+    console.error(error);
     return NextResponse.json(
       { message: "Terjadi kesalahan server" },
       { status: 500 }
