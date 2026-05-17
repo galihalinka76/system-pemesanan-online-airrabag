@@ -1,13 +1,15 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter,  useSearchParams} from "next/navigation";
 import { Mail, Lock, Key, ArrowRightIcon, Loader2 } from "lucide-react";
 import Navbar from "@/app/components/pelanggan/Navbar";
 import Swal from "sweetalert2";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -32,7 +34,6 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok) {
-        // Notifikasi Berhasil
         const Toast = Swal.mixin({
           toast: true,
           position: "top-end",
@@ -46,14 +47,14 @@ export default function LoginPage() {
           title: `Selamat datang, ${data.user.name}`,
         });
 
-        // Pengalihan berdasarkan Role dari API payload
+        // LOGIKA PENGALIHAN YANG DIPERBAIKI:
         if (data.user.role === "ADMIN") {
-          router.push("/admin/dashboard");
+          router.push("/admin");
         } else {
-          router.push("/"); // Beranda pelanggan
+          router.push(callbackUrl); 
         }
         
-        router.refresh(); // Segarkan state server untuk memperbarui navbar/session
+        router.refresh(); 
       } else {
         Swal.fire({
           title: "Gagal Masuk",
@@ -73,6 +74,8 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  
 
   return (
     <main className="min-h-screen bg-[#D9CDB8] text-black">

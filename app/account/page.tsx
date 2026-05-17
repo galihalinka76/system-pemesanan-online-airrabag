@@ -4,10 +4,11 @@ import { useSearchParams } from "next/navigation";
 import Navbar from "@/app/components/pelanggan/Navbar";
 import Sidebar from "../components/pelanggan/account/Sidebar";
 
-// Import Komponen Tab (Pastikan kamu sudah membuat file-file ini)
 import ProfileTab from "../components/pelanggan/account/ProfileTab";
 import OrdersTab from "../components/pelanggan/account/OrdersTab";
-// import FavoritesTab from "../components/pelanggan/account/FavoritesTab";
+import CartTab from "../components/pelanggan/account/CartTab";
+import WishlistTab from "../components/pelanggan/account/WishlistTab";
+import ReviewsTab from "../components/pelanggan/account/ReviewsTab";
 
 function AccountContent() {
   const searchParams = useSearchParams();
@@ -27,12 +28,14 @@ function AccountContent() {
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
         {activeTab === "profile" && <ProfileTab />}
         {activeTab === "orders" && <OrdersTab />}
+        {activeTab === "cart" && <CartTab />}
         {activeTab === "shipments" && (
             <div className="py-20 text-center">
                 <p className="text-[10px] font-black tracking-[0.5em] text-gray-300">NO ACTIVE SHIPMENTS</p>
             </div>
         )}
-        {/* {activeTab === "favorites" && <FavoritesTab />} */}
+        {activeTab === "favorites" && <WishlistTab />}
+        {activeTab === "reviews" && <ReviewsTab />}
       </div>
     </section>
   );

@@ -1,3 +1,4 @@
+
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -17,16 +18,16 @@ import {
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
-  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+  const [user, setUser] = useState<{ id: string; name: string; role: string } | null>(null);
+  // --- STATE BARU UNTUK JUMLAH KERANJANG ---
+  const [cartCount, setCartCount] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
-    // Monitor scroll untuk efek glassmorphism
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
 
-    // Ambil data user dari API
     const fetchUser = async () => {
       try {
         const res = await fetch("/api/auth/me");
@@ -41,6 +42,29 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+// 1. Pastikan Navbar tahu User ID (bisa ambil dari state 'user' yang sudah ada di Navbar)
+useEffect(() => {
+  const updateBadge = () => {
+    // Gunakan logika yang sama dengan HomePage
+    const currentId = user?.id; // Ambil ID dari state user di Navbar
+    const cartKey = currentId ? `cart_${currentId}` : "cart_guest";
+    
+    const cart = JSON.parse(localStorage.getItem(cartKey) || "[]");
+    setCartCount(cart.length);
+  };
+
+  window.addEventListener("cartUpdated", updateBadge);
+  window.addEventListener("storage", updateBadge);
+  
+  // Panggil setiap kali state 'user' berubah (setelah login/logout)
+  updateBadge(); 
+
+  return () => {
+    window.removeEventListener("cartUpdated", updateBadge);
+    window.removeEventListener("storage", updateBadge);
+  };
+}, [user]); // Tambahkan 'user' sebagai dependency agar key berubah saat login
 
   const handleLogout = async () => {
     try {
@@ -99,15 +123,36 @@ export default function Navbar() {
         >
           HOME
         </Link>
-        <Link
-          href="/shop"
-          className="
-            transition-colors
-            hover:text-[#020202]
-          "
-        >
-          SHOP
-        </Link>
+<Link 
+  href="/?show=true#shop-section" 
+  onClick={(e) => {
+    if (window.location.pathname === '/') {
+      // Jika sudah di Home, kita jalankan manual show + scroll
+      e.preventDefault();
+      
+      // 1. Panggil fungsi global atau state lewat URL
+      router.push('/?show=true', { scroll: false });
+
+      // 2. Logika Scroll
+      const element = document.getElementById('shop-section');
+      if (element) {
+        const offset = 80;
+        const bodyRect = document.body.getBoundingClientRect().top;
+        const elementRect = element.getBoundingClientRect().top;
+        const elementPosition = elementRect - bodyRect;
+        const offsetPosition = elementPosition - offset;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }}
+  className="transition-colors hover:text-[#020202]"
+>
+  SHOP
+</Link>
         <Link
           href="/about"
           className="
@@ -144,23 +189,32 @@ export default function Navbar() {
         >
           <Search size={18} />
         </button>
-        <button
-          className="
-            p-2
-            text-[#020202]
-            hover:scale-110 transition relative
-          "
-        >
-          <ShoppingBag size={18} />
-          <span
-            className="
-              w-2 h-2
-              bg-red-600
-              rounded-full border border-[#B6AB91]
-              absolute top-1 right-1
-            "
-          ></span>
-        </button>
+        {/* ICON CART DENGAN BADGE ANGKA */}
+<Link
+  href="/account?tab=cart"
+  id="cart-icon"
+  className="p-2 text-[#020202] hover:scale-110 transition relative cursor-pointer flex items-center justify-center"
+>
+  <ShoppingBag size={18} />
+  
+  {/* Logika Badge: Hanya muncul jika ada isi keranjang */}
+  {cartCount > 0 && (
+    <span
+      className="
+        absolute top-0 right-0
+        min-w-[18px] h-[18px] px-1
+        bg-red-600 text-white 
+        text-[10px] font-bold
+        flex items-center justify-center
+        rounded-full border border-[#B6AB91]
+        animate-in zoom-in duration-300
+        z-10
+      "
+    >
+      {cartCount}
+    </span>
+  )}
+</Link>
 
         <div
           className="
@@ -308,7 +362,7 @@ export default function Navbar() {
                     </Link>
 
                     <Link
-                      href="/cart"
+                       href="/account?tab=cart"
                       className="
                         flex
                         px-4 py-3
@@ -335,7 +389,7 @@ export default function Navbar() {
                     </Link>
 
                     <Link
-                      href="/wishlist"
+                       href="/account?tab=favorites"
                       className="
                         flex
                         px-4 py-3

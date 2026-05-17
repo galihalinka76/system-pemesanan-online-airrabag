@@ -85,8 +85,9 @@ export default function ProfileTab() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-24">
-        <Loader2 className="animate-spin text-[#062C2C]" size={32} />
+      <div className="py-20 text-center flex flex-col items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#062C2C] mb-4"></div>
+        <div className="text-xs text-gray-400">Synchronizing Your Profile...</div>
       </div>
     );
   }

@@ -8,6 +8,9 @@ import NewArrivals from "./components/pelanggan/NewArrivals";
 import ProductFilter from "./components/pelanggan/ProductFilter";
 import Image from "next/image";
 import CheckoutModal from "./components/pelanggan/checkout/CheckoutModal";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { useSearchParams } from "next/navigation";
 
 export default function HomePage() {
   const [showProducts, setShowProducts] = useState(false);
@@ -19,12 +22,99 @@ export default function HomePage() {
   const [selectedModel, setSelectedModel] = useState("All Models");
   const [searchQuery, setSearchQuery] = useState("");
   // 1. Tambahkan state baru di HomePage
-const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-const [checkoutData, setCheckoutData] = useState<{items: any[], total: number}>({ items: [], total: 0 });
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [checkoutData, setCheckoutData] = useState<{
+    items: any[];
+    total: number;
+  }>({ items: [], total: 0 });
+  // Di dalam function HomePage()
+  const [isFlying, setIsFlying] = useState(false);
+  const [flyCoords, setFlyCoords] = useState({
+    startX: 0,
+    startY: 0,
+    endX: 0,
+    endY: 0,
+  });
+  const [flyImage, setFlyImage] = useState("");
+
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  // Tambahkan ini di bagian deklarasi state
+const [favorites, setFavorites] = useState<any[]>([]);
 
 
+const getCartKey = (userId: any) => userId ? `cart_${userId}` : "cart_guest";
+const getFavKey = (userId: any) => userId ? `favorites_${userId}` : "favorites_guest";
+
+const handleAddToCartOnly = (item: any) => {
+  const cartKey = getCartKey(currentUser); // Menggunakan kunci dinamis
+  const existingCart = JSON.parse(localStorage.getItem(cartKey) || "[]");
+
+  const isExist = existingCart.find((cartItem: any) => cartItem.id === item.id);
+
+  let newCart;
+  if (!isExist) {
+    newCart = [...existingCart, { ...item, quantity: 1 }];
+  } else {
+    newCart = existingCart.map((cartItem: any) =>
+      cartItem.id === item.id
+        ? { ...cartItem, quantity: (cartItem.quantity || 1) + 1 }
+        : cartItem
+    );
+  }
+
+  localStorage.setItem(cartKey, JSON.stringify(newCart));
+  window.dispatchEvent(new Event("cartUpdated"));
+};
+
+
+const handleToggleFavorite = (item: any) => {
+  const favKey = getFavKey(currentUser); // Menggunakan kunci dinamis
+  const currentFavorites = JSON.parse(localStorage.getItem(favKey) || "[]");
+  
+  const index = currentFavorites.findIndex((fav: any) => fav.id === item.id);
+
+  let newFavorites;
+  if (index === -1) {
+    newFavorites = [...currentFavorites, { ...item, savedAt: new Date().toISOString() }];
+  } else {
+    newFavorites = currentFavorites.filter((fav: any) => fav.id !== item.id);
+  }
+
+  localStorage.setItem(favKey, JSON.stringify(newFavorites)); // Simpan ke kunci user
+  setFavorites(newFavorites);
+  window.dispatchEvent(new Event("favoritesUpdated"));
+};
+
+useEffect(() => {
+  // PENTING: Gunakan currentUser sebagai dependency
+  const favKey = getFavKey(currentUser);
+  const savedFavorites = JSON.parse(localStorage.getItem(favKey) || "[]");
+  setFavorites(savedFavorites);
+}, [currentUser]); 
+
+
+const fetchUser = async () => {
+  try {
+    const res = await fetch("/api/auth/me");
+    if (res.status === 401) {
+      setCurrentUser(null);
+      return;
+    }
+
+    const data = await res.json();
+
+    if (data && data.user) {
+      setCurrentUser(data.user.id);
+    } else {
+      setCurrentUser(null);
+    }
+  } catch (err) {
+    setCurrentUser(null);
+  }
+};
 
   useEffect(() => {
+    fetchUser();
     async function fetchData() {
       try {
         const [resProd, resPromo] = await Promise.all([
@@ -58,29 +148,32 @@ const [checkoutData, setCheckoutData] = useState<{items: any[], total: number}>(
   });
 
   // --- TAMBAHKAN INI: Filter untuk Mini Promo Grid ---
-const filteredPromos = promos.filter((p: any) => {
-  const query = searchQuery.toLowerCase();
-  
-  // Cocokkan dengan Nama Promo
-  const matchPromoName = p.name?.toLowerCase().includes(query);
-  
-  // Cocokkan dengan Nama Produk di dalam promo (Main & Second/Sub)
-  const matchMainProduct = p.mainProduct?.name?.toLowerCase().includes(query);
-  const matchSecondProduct = (p.secondProduct?.name || p.subProduct?.name)?.toLowerCase().includes(query);
+  const filteredPromos = promos.filter((p: any) => {
+    const query = searchQuery.toLowerCase();
 
-  // Filter berdasarkan Model/Kategori (Opsional: Jika promo ingin ikut filter model)
-  const matchModel = selectedModel === "All Models" || 
-                     p.mainProduct?.category?.toLowerCase() === selectedModel.toLowerCase();
+    const matchPromoName = p.name?.toLowerCase().includes(query);
 
-  // Filter berdasarkan Harga Promo
-  let matchPrice = true;
-  if (selectedPrice !== "all") {
-    const [min, max] = selectedPrice.split("-").map(Number);
-    matchPrice = p.promoPrice >= min && p.promoPrice <= max;
-  }
+    const matchMainProduct = p.mainProduct?.name?.toLowerCase().includes(query);
+    const matchSecondProduct = (p.secondProduct?.name || p.subProduct?.name)
+      ?.toLowerCase()
+      .includes(query);
 
-  return (matchPromoName || matchMainProduct || matchSecondProduct) && matchModel && matchPrice;
-});
+    const matchModel =
+      selectedModel === "All Models" ||
+      p.mainProduct?.category?.toLowerCase() === selectedModel.toLowerCase();
+
+    let matchPrice = true;
+    if (selectedPrice !== "all") {
+      const [min, max] = selectedPrice.split("-").map(Number);
+      matchPrice = p.promoPrice >= min && p.promoPrice <= max;
+    }
+
+    return (
+      (matchPromoName || matchMainProduct || matchSecondProduct) &&
+      matchModel &&
+      matchPrice
+    );
+  });
 
   const threeDaysAgo = new Date();
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
@@ -99,12 +192,49 @@ const filteredPromos = promos.filter((p: any) => {
       minimumFractionDigits: 0,
     }).format(price || 0);
 
+  // 2. Buat fungsi helper untuk buka modal
+  const handleOpenCheckout = (items: any[], total: number) => {
+    setCheckoutData({ items, total });
+    setIsCheckoutOpen(true);
+  };
 
-    // 2. Buat fungsi helper untuk buka modal
-const handleOpenCheckout = (items: any[], total: number) => {
-  setCheckoutData({ items, total });
-  setIsCheckoutOpen(true);
-};
+
+  const handleFlyBundle = (e: React.MouseEvent, data: any) => {
+    const cartIcon = document.getElementById("cart-icon");
+    const cardElement = (e.currentTarget as HTMLElement).closest(".group");
+    const imgElement = cardElement?.querySelector("img");
+
+    if (cartIcon && imgElement) {
+      const rect = imgElement.getBoundingClientRect();
+      const cartRect = cartIcon.getBoundingClientRect();
+
+      setFlyImage(data.image);
+      setFlyCoords({
+        startX: rect.left + rect.width / 2 + window.scrollX,
+        startY: rect.top + rect.height / 2 + window.scrollY,
+        endX: cartRect.left + cartRect.width / 2 + window.scrollX,
+        endY: cartRect.top + cartRect.height / 2 + window.scrollY,
+      });
+
+      setIsFlying(true);
+
+      handleAddToCartOnly(data);
+
+      setTimeout(() => setIsFlying(false), 1000);
+    } else {
+      handleAddToCartOnly(data);
+    }
+  };
+
+  // Di dalam HomePage.js
+  const searchParams = useSearchParams();
+  const showParam = searchParams.get("show");
+
+  useEffect(() => {
+    if (showParam === "true") {
+      setShowProducts(true);
+    }
+  }, [showParam]);
 
   return (
     <main className="min-h-screen bg-olive-200 text-black transition-all duration-500 overflow-x-hidden">
@@ -114,32 +244,45 @@ const handleOpenCheckout = (items: any[], total: number) => {
         {!showProducts ? (
           <section className="relative w-full h-[calc(100vh-4rem)] flex flex-col overflow-hidden">
             <div className="flex-grow relative z-0">
-              <Image src="/home/wel.png" alt="Airbag" fill className="object-cover animate-fadeIn" priority />
+              <Image
+                src="/home/wel.png"
+                alt="Airbag"
+                fill
+                className="object-cover animate-fadeIn"
+                priority
+              />
               <div className="absolute inset-0 bg-black/50 z-10"></div>
-              
+
               <div className="absolute inset-0 z-20 flex items-center justify-center animate-fadeIn">
                 <div className="flex flex-col items-center translate-y-64">
                   <div className="animate-bounce mb-2">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#B6AB91" strokeWidth="3">
+                    <svg
+                      width="32"
+                      height="32"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#B6AB91"
+                      strokeWidth="3"
+                    >
                       <path d="M7 13l5 5 5-5M7 6l5 5 5-5" />
                     </svg>
                   </div>
                   <button
                     onClick={() => setShowProducts(true)}
-                    className="text-[#B6AB91] hover:text-white px-10 py-2 font-black tracking-[0.4em] transition-all text-xs border-b border-[#B6AB91]/30 hover:border-[#B6AB91]" 
+                    className="text-[#B6AB91] hover:text-white px-10 py-2 font-black tracking-[0.4em] transition-all text-xs border-b border-[#B6AB91]/30 hover:border-[#B6AB91]"
                   >
-                    TAB HIRE 
+                    TAB HIRE
                   </button>
                 </div>
               </div>
             </div>
-            <div className="relative z-30 bg-[#B6AB91] w-full h-16"></div>
+            <div className="relative z-30 bg-[#B6AB91]  w-full h-16"></div>
           </section>
         ) : (
           <section className="animate-slideUp">
             <PromoSection promos={promos} />
 
-            <div className="px-6 md:px-12">
+            <div id="shop-section" className="px-6 md:px-12">
               <div className="flex justify-between items-end mb-6 border-b border-gray-100 pb-8">
                 <div>
                   <span className="text-[10px] text-gray-400 uppercase tracking-[0.3em]">
@@ -165,14 +308,64 @@ const handleOpenCheckout = (items: any[], total: number) => {
                   {/* --- MINI PROMO GRID --- */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mb-10">
                     {filteredPromos.map((p: any) => {
-    const totalNormal =
-      (p.mainProduct?.price || 0) +
-      (p.secondProduct?.price || p.subProduct?.price || 0);
+                      const totalNormal =
+                        (p.mainProduct?.price || 0) +
+                        (p.secondProduct?.price || p.subProduct?.price || 0);
+
+                      // --- PERBARUI BAGIAN INI ---
+                      const bundleData = {
+                        id: p.id,
+                        name: p.name || "Paket Bundling",
+                        price: p.promoPrice,
+                        image: p.mainProduct?.image, 
+                        isBundle: true,
+                        // Tambahkan detail item agar di halaman favorit bisa ditampilkan keduanya
+                        bundleItems: [
+                          {
+                            name: p.mainProduct?.name,
+                            price: p.mainProduct?.price,
+                            image: p.mainProduct?.image,
+                          },
+                          {
+                            name: p.secondProduct?.name || p.subProduct?.name,
+                            price:
+                              p.secondProduct?.price || p.subProduct?.price,
+                            image:
+                              p.secondProduct?.image || p.subProduct?.image,
+                          },
+                        ],
+                        description: p.description,
+                      };
+
+                      const isFavorite = favorites.some(
+                        (fav) => fav.id === p.id,
+                      );
+
+                      // Fungsi khusus untuk Double Click di Card (Hanya menambah, tidak menghapus)
+                      const handleLikeOnly = (e: React.MouseEvent) => {
+                        const currentFavorites = JSON.parse(
+                          localStorage.getItem("favorites") || "[]",
+                        );
+                        const exists = currentFavorites.some(
+                          (fav: any) => fav.id === bundleData.id,
+                        );
+
+                        if (!exists) {
+                          handleToggleFavorite(bundleData); // Tambah jika belum ada
+                        }
+                        // Jika sudah ada, diamkan saja (seperti Instagram)
+                      };
 
                       return (
                         <div
                           key={p.id}
-                          className="group relative bg-[#062C2C] rounded-lg p-10  transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:-translate-y-2 flex flex-col"
+                          // 1. Tambahkan Double Click di sini (Efek seperti Instagram)
+                          onDoubleClick={handleLikeOnly}
+                          className={`group relative bg-[#062C2C] rounded-2xl p-8 border transition-all duration-500 overflow-hidden cursor-pointer select-none ${
+                            isFavorite
+                              ? "border-red-500/50"
+                              : "border-white/5 hover:border-[#B6AB91]/30"
+                          }`}
                         >
                           <div className="mb-4 border-b border-white/10 flex justify-between items-center pb-4">
                             <div>
@@ -265,27 +458,65 @@ const handleOpenCheckout = (items: any[], total: number) => {
                               {/* Baris Action Buttons */}
                               <div className="flex items-center gap-2">
                                 <button
-                                onClick={() => handleOpenCheckout(
-                                  [p.mainProduct, p.secondProduct || p.subProduct], 
-                                  p.promoPrice 
-                                )}
-                                className="flex-grow bg-[#B6AB91] text-[#062C2C] py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white transition-all shadow-lg active:scale-95">
+                                  onClick={() =>
+                                    handleOpenCheckout(
+                                      [
+                                        p.mainProduct,
+                                        p.secondProduct || p.subProduct,
+                                      ],
+                                      p.promoPrice,
+                                    )
+                                  }
+                                  className="flex-grow bg-[#B6AB91] text-[#062C2C] py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-white transition-all shadow-lg active:scale-95"
+                                >
                                   Beli Bundle {formatIDR(p.promoPrice)}
                                 </button>
 
-                                {/* Icon Cart */}
-                                <button className="p-4 bg-white/5 rounded-xl text-white hover:bg-[#B6AB91] hover:text-[#062C2C] transition-all group/icon">
+                                {/* Icon Cart di dalam Bundle Grid */}
+                                <button
+                                  onClick={(e) =>
+                                    handleFlyBundle(e, {
+                                      id: p.id,
+                                      name: p.name || "Paket Bundling",
+                                      price: p.promoPrice,
+                                      image: p.mainProduct?.image,
+                                      isBundle: true,
+
+                                      bundleImages: [
+                                        p.mainProduct?.image,
+                                        p.secondProduct?.image ||
+                                          p.subProduct?.image,
+                                      ],
+                                      bundleItems: [
+                                        p.mainProduct?.name,
+                                        p.secondProduct?.name ||
+                                          p.subProduct?.name,
+                                      ],
+                                    })
+                                  }
+                                  className="p-4 bg-white/5 rounded-xl text-white hover:bg-[#B6AB91] hover:text-[#062C2C] transition-all group/icon"
+                                >
                                   <ShoppingCart
                                     size={18}
                                     className="group-hover/icon:scale-110 transition-transform"
                                   />
                                 </button>
 
-                                {/* Icon Love */}
-                                <button className="p-4 bg-white/5 rounded-xl text-white hover:bg-red-500 transition-all group/icon">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Sangat penting agar Double Click Card tidak terpicu
+                                    handleToggleFavorite(bundleData);
+                                  }}
+                                  className={`p-4 rounded-xl transition-all active:scale-90 ${
+                                    isFavorite
+                                      ? "bg-red-500 text-white"
+                                      : "bg-white/5 text-white hover:bg-red-500/20"
+                                  }`}
+                                >
                                   <Heart
                                     size={18}
-                                    className="group-hover/icon:scale-110 transition-transform"
+                                    fill={isFavorite ? "currentColor" : "none"}
+                                    className={`transition-transform duration-300 ${isFavorite ? "scale-125" : "scale-100"}`}
                                   />
                                 </button>
                               </div>
@@ -322,11 +553,16 @@ const handleOpenCheckout = (items: any[], total: number) => {
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-12 pb-32">
                         {archiveProductsData.map((product: any) => (
-                         <ProductCard 
-                          key={product.id} 
-                          product={product} 
-                          onBuy={(item) => handleOpenCheckout([item], item.price)} 
-                        />
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            userId={currentUser}
+                            onBuy={(item) =>
+                              handleOpenCheckout([item], item.price)
+                            }
+                            onAddToCart={(item) => handleAddToCartOnly(item)}
+                            onToggleFavorite={handleToggleFavorite}
+                          />
                         ))}
                       </div>
                     )}
@@ -337,13 +573,54 @@ const handleOpenCheckout = (items: any[], total: number) => {
           </section>
         )}
       </div>
-      <CheckoutModal 
-      isOpen={isCheckoutOpen} 
-      onClose={() => setIsCheckoutOpen(false)} 
-      items={checkoutData.items} 
-      totalPrice={checkoutData.total}
-      userId={1} // Sementara hardcode user ID 1
-    />
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        items={checkoutData.items}
+        totalPrice={checkoutData.total}
+        userId={currentUser}
+      />
+
+      {typeof document !== "undefined" &&
+        isFlying &&
+        createPortal(
+          <AnimatePresence>
+            <motion.div
+              initial={{
+                position: "absolute",
+                top: flyCoords.startY,
+                left: flyCoords.startX,
+                x: "-50%",
+                y: "-50%",
+                scale: 1,
+                opacity: 1,
+                zIndex: 999999,
+              }}
+              animate={{
+                top: flyCoords.endY,
+                left: flyCoords.endX,
+                scale: 0.1,
+                opacity: [1, 0.8, 0],
+                rotate: 720,
+              }}
+              transition={{
+                duration: 0.8,
+                ease: [0.45, 0, 0.55, 1],
+              }}
+              className="pointer-events-none"
+            >
+              <div className="w-20 h-20 relative overflow-hidden rounded-full border-2 border-[#B6AB91] shadow-[0_0_20px_rgba(182,171,145,0.5)] bg-white">
+                <Image
+                  src={flyImage || "/placeholder.jpg"}
+                  alt="flying"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            </motion.div>
+          </AnimatePresence>,
+          document.body,
+        )}
     </main>
   );
 }

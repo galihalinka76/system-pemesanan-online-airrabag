@@ -18,6 +18,19 @@ model User {
   createdAt DateTime @default(now())
 
   orders Order[] 
+  reviews   StoreReview[]
+}
+
+model StoreReview {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  rating    Int      // 1 sampai 5
+  comment   String   @db.Text
+  isActive  Boolean  @default(true) 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Product {
@@ -40,7 +53,7 @@ model Promo {
   id              Int      @id @default(autoincrement())
   name            String?  // Nama paket (opsional)
   description     String?  @db.Text
-  promoPrice      Float    // Harga total paket promo
+  promoPrice      Float    
   
   // Produk Pertama (Utama)
   mainProductId   Int
@@ -58,7 +71,7 @@ model Order {
   id        Int      @id @default(autoincrement())
   userId    Int
   total     Float
-  status    String
+  status    OrderStatus  @default(PENDING)
   createdAt DateTime @default(now())
 
   user       User        @relation(fields: [userId], references: [id])

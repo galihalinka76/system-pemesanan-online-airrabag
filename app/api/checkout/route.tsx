@@ -1,32 +1,30 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { jwtVerify } from "jose"; // Import jose untuk verifikasi token
+import { PrismaClient, OrderStatus } from "@prisma/client";
+import { jwtVerify } from "jose";
 
 const prisma = new PrismaClient();
 const secret = new TextEncoder().encode(process.env.JWT_SECRET || "rahasia_super_aman_123");
 
 export async function POST(req: Request) {
   try {
-    // 1. Ambil token dari cookie
     const token = req.headers.get("cookie")?.split("session_token=")[1]?.split(";")[0];
     
     if (!token) {
       return NextResponse.json({ message: "Silahkan login terlebih dahulu" }, { status: 401 });
     }
 
-    // 2. Verifikasi token untuk mendapatkan ID user yang SEBENARNYA login
     const { payload } = await jwtVerify(token, secret);
-    const authenticatedUserId = Number(payload.id); // Ini ID asli dari session
+    const authenticatedUserId = Number(payload.id);
 
     const { items, totalPrice, quantity } = await req.json();
 
     const result = await prisma.$transaction(async (tx) => {
-      // 3. Gunakan authenticatedUserId (Bukan userId dari frontend)
+      // 1. Buat Order dengan status PENDING
       const order = await tx.order.create({
         data: {
           userId: authenticatedUserId, 
           total: totalPrice,
-          status: "PROSES",
+          status: "PENDING", 
           orderItems: {
             create: items.map((item: any) => ({
               productId: Number(item.id),
@@ -38,12 +36,15 @@ export async function POST(req: Request) {
         include: { orderItems: true }
       });
 
+      // BAGIAN UPDATE STOK DIHAPUS/DIKOMENTARI
+      /* 
       for (const item of items) {
         await tx.product.update({
           where: { id: Number(item.id) },
           data: { stock: { decrement: Number(quantity) } }
         });
       }
+      */
 
       return order;
     });

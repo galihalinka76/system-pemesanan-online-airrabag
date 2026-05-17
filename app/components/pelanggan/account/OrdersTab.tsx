@@ -6,9 +6,28 @@ import {
   AlertCircle,
   ChevronRight,
   CreditCard,
+  Printer,
+  Package, CheckCircle2, Clock 
 } from "lucide-react";
 import Link from "next/link";
 import Swal from "sweetalert2";
+import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
+
+
+// Helper untuk warna status yang lebih modern
+const getStatusStyles = (status: string) => {
+  switch (status) {
+    case "SELESAI":
+      return "bg-emerald-50 text-emerald-600 border-emerald-100";
+    case "PROSES":
+      return "bg-blue-50 text-blue-600 border-blue-100";
+    case "PENDING":
+      return "bg-amber-50 text-amber-600 border-amber-100";
+    default:
+      return "bg-gray-50 text-gray-600 border-gray-100";
+  }
+};
 
 export default function OrdersTab() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -166,8 +185,9 @@ const handlePrintInvoice = (order: any) => {
 
   if (loading)
     return (
-      <div className="flex justify-center p-20">
-        <Loader2 className="animate-spin text-[#062C2C]" />
+      <div className="py-20 text-center flex flex-col items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#062C2C] mb-4"></div>
+        <div className="text-xs text-gray-400">Synchronizing Your Order...</div>
       </div>
     );
 
@@ -178,189 +198,169 @@ const handlePrintInvoice = (order: any) => {
       </div>
     );
 
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-      {orders.map((order) => {
-        const items = order.orderItems || order.items || [];
-        const isBundling = items.length > 1;
-        const userAddress = order.user?.address; // Ambil alamat
+return (
+    <div className="space-y-6">
+      <AnimatePresence>
+        {orders.map((order: any, index: number) => {
+          const items = order.orderItems || order.items || [];
+          const isBundling = items.length > 1;
+          const userAddress = order.user?.address;
 
-        return (
-          <div
-            key={order.id}
-            className="border border-gray-100 rounded-3xl overflow-hidden bg-white shadow-sm"
-          >
-            {/* Header Order Tetap Sama */}
-            <div className="bg-[#F6F6F6] p-4 px-6 flex justify-between items-center">
-              <div>
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                  Order ID
-                </span>
-                <p className="text-[10px] font-black text-[#062C2C]">
-                  #{order.id}
-                </p>
-              </div>
-              <div className="text-right">
-                <span
-                  className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${
-                    order.status === "SELESAI"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-orange-100 text-orange-700"
-                  }`}
-                >
-                  {order.status}
-                </span>
-              </div>
-            </div>
+          return (
+            <motion.div
+              key={order.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="group relative bg-white border border-gray-100 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-xl hover:shadow-black/5 transition-all duration-500"
+            >
+              {/* Header: Glassy Effect */}
+              <div className="bg-gray-50/50 backdrop-blur-sm p-5 px-8 flex justify-between items-center border-b border-gray-50">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-gray-100">
+                    <Package size={18} className="text-[#062C2C]" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] block leading-none mb-1">
+                      Transaction ID
+                    </span>
+                    <p className="text-xs font-black text-[#062C2C] tracking-wider">
+                    #{String(order.id).slice(-8).toUpperCase()}
+                  </p>
+                  </div>
+                </div>
 
-            {/* Konten Card (Satu Card untuk Banyak Item) */}
-            <div className="p-6">
-              <div className="flex flex-col md:flex-row gap-6 items-center">
-                {/* Visual Grouping */}
-                <div className="relative flex items-center justify-center w-24 h-24">
-                  {isBundling ? (
-                    // Tampilan Tumpuk untuk Bundling
-                    <div className="relative w-full h-full">
-                      {items.slice(0, 2).map((item: any, idx: number) => (
-                        <div
-                          key={idx}
-                          className={`absolute w-16 h-16 rounded-xl border-2 border-white shadow-md overflow-hidden transition-transform
-                          ${idx === 0 ? "z-10 translate-x-0" : "z-0 translate-x-4 translate-y-4"}`}
-                        >
-                          <img
-                            src={item.product?.image || "/placeholder.jpg"}
-                            className="w-full h-full object-cover"
-                          />
+                <div className={`px-4 py-1.5 rounded-full border ${getStatusStyles(order.status)} flex items-center gap-2`}>
+                  {order.status === "SELESAI" ? <CheckCircle2 size={12} /> : <Clock size={12} className="animate-spin-slow" />}
+                  <span className="text-[10px] font-black uppercase tracking-widest">
+                    {order.status}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-8">
+                <div className="flex flex-col lg:flex-row gap-8">
+                  {/* Visual: Image Stack */}
+                  <div className="relative flex-shrink-0 mx-auto lg:mx-0">
+                    <div className="relative w-32 h-32 flex items-center justify-center">
+                      {isBundling ? (
+                        <div className="relative w-full h-full">
+                          {items.slice(0, 3).map((item: any, idx: number) => (
+                            <motion.div
+                              key={idx}
+                              whileHover={{ scale: 1.05, zIndex: 30 }}
+                              className="absolute w-20 h-20 rounded-2xl border-4 border-white shadow-2xl overflow-hidden transition-all duration-300"
+                              style={{ 
+                                left: `${idx * 20}px`, 
+                                top: `${idx * 10}px`,
+                                zIndex: 20 - idx,
+                                opacity: 1 - idx * 0.2
+                              }}
+                            >
+                              <Image
+                                src={item.product?.image || "/placeholder.jpg"}
+                                alt="thumb"
+                                fill
+                                className="object-cover"
+                              />
+                            </motion.div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    // Tampilan Single
-                    <div className="w-20 h-20 rounded-xl overflow-hidden border border-gray-100">
-                      <img
-                        src={items[0]?.product?.image || "/placeholder.jpg"}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Detail Informasi */}
-                <div className="flex-grow text-center md:text-left">
-                  <h4 className="text-sm font-black uppercase text-[#062C2C] tracking-tight">
-                    {isBundling
-                      ? "Eksklusif Bundling Package"
-                      : items[0]?.product?.name}
-                  </h4>
-                  <div className="mt-1 flex flex-wrap justify-center md:justify-start gap-2">
-                    {items.map((item: any, idx: number) => (
-                      <span
-                        key={idx}
-                        className="text-[9px] bg-gray-100 px-2 py-0.5 rounded text-gray-500 font-bold uppercase"
-                      >
-                        {item.product?.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-6 flex flex-col md:flex-row justify-between items-center gap-4 border-t pt-4">
-                  <div className="flex flex-col">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                      Total Bayar
-                    </p>
-                    <p className="text-xl font-black text-[#062C2C]">
-                      {formatIDR(order.total)}
-                    </p>
-                  </div>
-
-                  {order.status === "PENDING" && (
-                    <div className="w-full md:w-auto">
-                      {userAddress ? (
-                        <button
-                          onClick={() => handlePayment(order)}
-                          className="w-full md:w-64 bg-[#062C2C] hover:bg-emerald-900 text-[#B6AB91] py-3 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl group"
-                        >
-                          <CreditCard
-                            size={18}
-                            className="group-hover:rotate-12 transition-transform"
-                          />
-                          <span className="text-xs font-black uppercase tracking-widest">
-                            Bayar Sekarang
-                          </span>
-                        </button>
                       ) : (
-                        <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-center gap-2">
-                          <AlertCircle size={14} className="text-amber-600" />
-                          <p className="text-[10px] text-amber-700 font-bold uppercase">
-                            Isi alamat untuk membayar
-                          </p>
+                        <div className="w-28 h-28 rounded-[2rem] overflow-hidden border-4 border-gray-50 shadow-lg rotate-3 group-hover:rotate-0 transition-transform duration-500">
+                          <Image
+                            src={items[0]?.product?.image || "/placeholder.jpg"}
+                            alt="product"
+                            fill
+                            className="object-cover"
+                          />
                         </div>
                       )}
                     </div>
-                  )}
-
-                  {/* Tampilkan tombol Cetak Struk jika sudah bayar */}
-{(order.status === "PROSES" || order.status === "SELESAI") && (
-  <button
-    onClick={() => handlePrintInvoice(order)}
-    className="w-full md:w-auto border-2 border-[#062C2C] text-[#062C2C] hover:bg-gray-50 py-2.5 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 font-black text-[10px] uppercase tracking-widest"
-  >
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-    Cetak Struk
-  </button>
-)}
-
-{/* Tampilkan Label "Sudah Dibayar" jika ada data payment */}
-{order.payment && (
-  <div className="mt-2 flex items-center gap-2">
-    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-    <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">
-      Lunas via {order.payment.paymentType}
-    </span>
-  </div>
-)}
-                </div>
-              </div>
-
-              {/* --- SECTION ALAMAT (BARU) --- */}
-              <div className="mt-6 pt-6 border-t border-dashed border-gray-100">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-gray-50 rounded-lg">
-                    <MapPin size={14} className="text-[#062C2C]" />
                   </div>
-                  <div className="flex-grow">
-                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
-                      Alamat Pengiriman
-                    </p>
 
-                    {userAddress ? (
-                      <p className="text-xs text-gray-600 font-medium leading-relaxed">
-                        {userAddress}
-                      </p>
-                    ) : (
-                      <div className="flex flex-col md:flex-row md:items-center gap-3">
-                        <div className="flex items-center gap-1.5 text-amber-600">
-                          <AlertCircle size={12} />
-                          <p className="text-[10px] font-bold italic">
-                            Alamat belum diatur
-                          </p>
+                  {/* Info Detail */}
+                  <div className="flex-grow flex flex-col justify-center">
+                    <h4 className="text-lg font-black text-[#062C2C] leading-tight mb-2 group-hover:text-emerald-900 transition-colors">
+                      {isBundling ? "Eksklusif Bundling Package" : items[0]?.product?.name}
+                    </h4>
+                    
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {items.map((item: any, idx: number) => (
+                        <span key={idx} className="text-[9px] bg-[#F6F6F6] text-gray-500 px-3 py-1 rounded-lg font-bold border border-gray-100 uppercase">
+                          {item.qty}x {item.product?.name}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Alamat Mini-Card */}
+                    <div className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100/50 relative overflow-hidden">
+                      <div className="flex items-start gap-3">
+                        <MapPin size={14} className="text-[#B6AB91] mt-1" />
+                        <div className="flex-grow">
+                          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Shipping To</p>
+                          {userAddress ? (
+                            <p className="text-[11px] text-gray-600 font-medium line-clamp-1">{userAddress}</p>
+                          ) : (
+                            <Link href="/account?tab=profile" className="flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:underline">
+                              Lengkapi alamat pengiriman <ChevronRight size={10} />
+                            </Link>
+                          )}
                         </div>
-                        <Link
-                          href="/account?tab=profile"
-                          className="flex items-center gap-1 text-[10px] font-black text-[#062C2C] uppercase hover:underline"
-                        >
-                          Lengkapi Sekarang <ChevronRight size={10} />
-                        </Link>
                       </div>
-                    )}
+                    </div>
+                  </div>
+
+                  {/* Total & Action */}
+                  <div className="lg:w-64 flex flex-col justify-between items-center lg:items-end border-t lg:border-t-0 lg:border-l border-gray-100 pt-6 lg:pt-0 lg:pl-8">
+                    <div className="text-center lg:text-right mb-4 lg:mb-0">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-1">Grand Total</p>
+                      <p className="text-2xl font-black text-[#062C2C] tracking-tighter">
+                        {formatIDR(order.total)}
+                      </p>
+                      {order.payment && (
+                        <div className="inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 bg-emerald-50 rounded-md">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-[9px] font-black text-emerald-600 uppercase">Paid via {order.payment.paymentType}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="w-full space-y-3">
+                      {order.status === "PENDING" && userAddress && (
+                        <button
+                          onClick={() => handlePayment(order)}
+                          className="w-full bg-[#062C2C] text-[#B6AB91] py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-emerald-950/20 active:scale-95 transition-all group/btn"
+                        >
+                          <CreditCard size={18} className="group-hover/btn:-translate-y-1 transition-transform" />
+                          <span className="text-[11px] font-black uppercase tracking-widest">Pay Securely</span>
+                        </button>
+                      )}
+
+                      {(order.status === "PROSES" || order.status === "SELESAI") && (
+                        <button
+                          onClick={() => handlePrintInvoice(order)}
+                          className="w-full border-2 border-gray-100 hover:border-[#062C2C] text-[#062C2C] py-3 rounded-2xl flex items-center justify-center gap-2 transition-all font-black text-[10px] uppercase tracking-[0.2em]"
+                        >
+                          <Printer size={16} />
+                          Print Invoice
+                        </button>
+                      )}
+
+                      {order.status === "PENDING" && !userAddress && (
+                         <div className="p-3 bg-amber-50 rounded-xl border border-amber-100 flex items-center gap-2 animate-pulse">
+                            <AlertCircle size={14} className="text-amber-600 flex-shrink-0" />
+                            <p className="text-[9px] text-amber-700 font-bold uppercase tracking-tight">Address Required for Payment</p>
+                         </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        );
-      })}
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
     </div>
   );
 }

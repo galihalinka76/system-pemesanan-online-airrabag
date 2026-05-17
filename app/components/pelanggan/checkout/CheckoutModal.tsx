@@ -33,10 +33,10 @@ export default function CheckoutModal({ isOpen, onClose, items, totalPrice, user
 
 const handleCheckout = async () => {
   if (!userId) {
-    router.push("/auth/login");
+    const currentPath = window.location.pathname;
+    router.push(`/auth/login?callbackUrl=${encodeURIComponent(currentPath)}`);
     return;
   }
-
   setLoading(true);
   
   try {
